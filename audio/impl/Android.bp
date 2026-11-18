@@ -162,12 +162,22 @@ cc_library_shared {
         "android.hardware.audio.common@7.1-enums",
         "android.hardware.audio.common@7.1-util",
         "libbase",
-    ],
+    ] + select(soong_config_variable("android_hardware_audio", "gts9u_speaker_dolby"), {
+        true: ["libaudioutils"],
+        default: [],
+    }),
+    static_libs: select(soong_config_variable("android_hardware_audio", "gts9u_speaker_dolby"), {
+        true: ["//device/samsung/gts9uwifi:libgts9u_speaker_dolby"],
+        default: [],
+    }),
     cflags: [
         "-DMAJOR_VERSION=7",
         "-DMINOR_VERSION=1",
         "-DCOMMON_TYPES_MINOR_VERSION=0",
         "-DCORE_TYPES_MINOR_VERSION=0",
         "-include common/all-versions/VersionMacro.h",
-    ],
+    ] + select(soong_config_variable("android_hardware_audio", "gts9u_speaker_dolby"), {
+        true: ["-DGTS9U_SPEAKER_DOLBY"],
+        default: [],
+    }),
 }

@@ -198,7 +198,11 @@ std::tuple<Result, sp<IStreamOut>> Device::openOutputStreamCore(int32_t ioHandle
     ALOGV("open_output_stream status %d stream %p", status, halStream);
     sp<IStreamOut> streamOut;
     if (status == OK) {
-        streamOut = new StreamOut(this, halStream, halFlags);
+        auto output = sp<StreamOut>::make(this, halStream, halFlags);
+#ifdef GTS9U_SPEAKER_DOLBY
+        output->setSpeakerRoute(mSpeakerRoutes.open(ioHandle, halDevice));
+#endif
+        streamOut = output;
         ++mOpenedStreamsCount;
         android::hardware::setMinSchedulerPolicy(streamOut, SCHED_NORMAL, ANDROID_PRIORITY_AUDIO);
     }
@@ -401,6 +405,11 @@ std::tuple<Result, AudioPatchHandle> Device::createOrUpdateAudioPatch(
                                mDevice->create_audio_patch(mDevice, sources.size(), &halSources[0],
                                                            sinks.size(), &halSinks[0], &halPatch));
         if (retval == Result::OK) {
+#ifdef GTS9U_SPEAKER_DOLBY
+            mSpeakerRoutes.updatePatch(static_cast<audio_patch_handle_t>(patch), halPatch,
+                                       sources.size(), halSources.get(),
+                                       sinks.size(), halSinks.get());
+#endif
             patch = static_cast<AudioPatchHandle>(halPatch);
         }
     }
@@ -409,9 +418,12 @@ std::tuple<Result, AudioPatchHandle> Device::createOrUpdateAudioPatch(
 
 Return<Result> Device::releaseAudioPatch(int32_t patch) {
     if (version() >= AUDIO_DEVICE_API_VERSION_3_0) {
-        return analyzeStatus(
-            "release_audio_patch",
-            mDevice->release_audio_patch(mDevice, static_cast<audio_patch_handle_t>(patch)));
+        const int status =
+                mDevice->release_audio_patch(mDevice, static_cast<audio_patch_handle_t>(patch));
+#ifdef GTS9U_SPEAKER_DOLBY
+        if (status == OK) mSpeakerRoutes.releasePatch(static_cast<audio_patch_handle_t>(patch));
+#endif
+        return analyzeStatus("release_audio_patch", status);
     }
     return Result::NOT_SUPPORTED;
 }
@@ -506,6 +518,13 @@ Return<void> Device::getParameters(const hidl_vec<ParameterValue>& context,
 }
 Return<Result> Device::setParameters(const hidl_vec<ParameterValue>& context,
                                      const hidl_vec<ParameterValue>& parameters) {
+#ifdef GTS9U_SPEAKER_DOLBY
+    if (parameters.size() == 1 &&
+        parameters[0].key == ::gts9u::audio::kDolbyProfileParameter) {
+        return ::gts9u::audio::setDolbyProfile(parameters[0].value.c_str())
+                ? Result::OK : Result::INVALID_ARGUMENTS;
+    }
+#endif
     return setParametersImpl(context, parameters);
 }
 #endif

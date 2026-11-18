@@ -56,6 +56,16 @@ blob_fixups: blob_fixups_user_type = {
         .sig_replace('88 58 9D 52 FF 02 08 6B AB 01 00 54', '88 58 9D 52 FF 02 08 6B 1F 20 03 D5'),
     'vendor/etc/vintf/manifest/sec_c2_manifest_default0_1_0.xml': blob_fixup()
         .regex_replace('default0', 'software'),
+    # Tracefs is mounted by platform init. These legacy scheduler nodes are
+    # absent from the current 5.15 kernel; preserve the supported tunables.
+    'vendor/etc/init/hw/init.qti.kernel.rc': blob_fixup()
+        .regex_replace(r'(?m)^    mount tracefs tracefs /sys/kernel/tracing\n', '')
+        .regex_replace(r'(?m)^    chmod 0755 /sys/kernel/tracing\n', '')
+        .regex_replace(r'(?m)^    write /dev/cpuctl/(?:foreground|top-app)/cpu\.uclamp\.sched_boost_no_override 1\n', '')
+        .regex_replace(r'(?m)^    write /dev/cpuctl/(?:background|foreground|top-app)/cpu\.uclamp\.colocate [01]\n', ''),
+    # Current rmnet modules are installed in /vendor/lib/modules, not 5.4-gki.
+    'vendor/etc/init/netmgrd.rc': blob_fixup()
+        .regex_replace(r'(?m)^    exec .* /vendor/lib/modules/5\.4-gki .*\n', ''),
     'vendor/etc/init/vendor.qti.media.c2audio@1.0-service.rc': blob_fixup()
         .regex_replace('.*disabled.*\n', ''),
     ('vendor/etc/media_codecs_kalama.xml'): blob_fixup()

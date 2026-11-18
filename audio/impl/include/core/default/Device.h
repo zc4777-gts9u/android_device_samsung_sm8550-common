@@ -34,6 +34,10 @@
 #include <VersionUtils.h>
 #include <util/CoreUtils.h>
 
+#ifdef GTS9U_SPEAKER_DOLBY
+#include <gts9u/SpeakerDolby.h>
+#endif
+
 namespace android {
 namespace hardware {
 namespace audio {
@@ -183,6 +187,9 @@ struct Device : public IDevice, public ParametersUtil {
     audio_hw_device_t* mDevice;
     int mOpenedStreamsCount = 0;
     samsung::audio::CallAudioController mCallAudio;
+#ifdef GTS9U_SPEAKER_DOLBY
+    ::gts9u::audio::SpeakerRoutes mSpeakerRoutes;
+#endif
 
     virtual ~Device();
 

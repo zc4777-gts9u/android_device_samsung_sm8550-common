@@ -54,6 +54,11 @@ struct StreamOut : public IStreamOut {
 
     StreamOut(const sp<Device>& device, audio_stream_out_t* stream,
               audio_output_flags_t flags);
+#ifdef GTS9U_SPEAKER_DOLBY
+    void setSpeakerRoute(std::shared_ptr<::gts9u::audio::SpeakerRoute> route) {
+        mSpeakerRoute = std::move(route);
+    }
+#endif
 
     // Methods from ::android::hardware::audio::CPP_VERSION::IStream follow.
     Return<uint64_t> getFrameSize() override;
@@ -181,6 +186,9 @@ struct StreamOut : public IStreamOut {
     EventFlag* mEfGroup;
     std::atomic<bool> mStopWriteThread;
     sp<Thread> mWriteThread;
+#ifdef GTS9U_SPEAKER_DOLBY
+    std::shared_ptr<::gts9u::audio::SpeakerRoute> mSpeakerRoute;
+#endif
 
     virtual ~StreamOut();
 

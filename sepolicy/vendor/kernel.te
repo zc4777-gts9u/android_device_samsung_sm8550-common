@@ -1,0 +1,3 @@
+# cfg80211 creates its regulatory trust keyring while vendor_modprobe loads
+# the module. Its asynchronous firmware verifier runs in the kernel domain.
+allow kernel vendor_modprobe:key search;

@@ -551,3 +551,12 @@ external_firmware_handler /devices/platform/soc/soc:gh-secure-vm-loader@0/firmwa
 
 # Power on alarm
 /dev/power_on_alarm       0664   system     radio
+
+# Use AOSP's parallel coldboot restorecon to reduce time behind the boot logo.
+# Split nested /sys subtrees as documented in system/core/init/README.ueventd.md;
+# ueventd still waits for every handler and labeling task before cold_boot_done.
+parallel_restorecon enabled
+parallel_restorecon_dir /sys
+parallel_restorecon_dir /sys/devices
+parallel_restorecon_dir /sys/devices/platform
+parallel_restorecon_dir /sys/devices/platform/soc

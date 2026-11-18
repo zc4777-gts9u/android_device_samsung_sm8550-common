@@ -67,7 +67,7 @@ import /vendor/etc/init/hw/init.${ro.product.vendor.device}.rc
 import /vendor/etc/init/hw/init.${ro.product.vendor.name}.rc
 
 on early-init
-    write /proc/sys/kernel/printk_devkmsg ratelimited
+    # printk.devkmsg is fixed by the BoardConfig kernel command line.
     export MEMTAG_OPTIONS off
 
 on init
@@ -89,17 +89,23 @@ on fs
     mkdir /mnt/vendor/persist/secnvm 0770 system system
     mkdir /mnt/vendor/persist/data 0700 system system
 
-on post-fs
-    #Execute virtualization manager
-    enable vendor.qvirtmgr
-    start  vendor.qvirtmgr
+# Start the tablet's KeyMint/SPU initialization while remaining modules load.
+# EFS and firmware are mounted by the preceding fs action.
+on fs && property:ro.product.vendor.device=gts9uwifi
+    mkdir /mnt/vendor/efs/DAK 0775 system system
+    restorecon --recursive --force /mnt/vendor/efs/DAK
+    chown system system /mnt/vendor/efs/DAK/gakkeybox
+    chmod 0644 /mnt/vendor/efs/DAK/gakkeybox
+    start vendor.keymint-default
 
 on late-fs
     mount_all /vendor/etc/fstab.qcom --late
 
 on post-fs-data
     mkdir /vendor/data/tombstones 0771 system system
-    # Enable WLAN cold boot calibration
+    # Data mounts/crypto can overlap module loading, but calibration requires a
+    # completed CNSS probe. The fs_ready node alone does not guarantee this.
+    wait_for_prop vendor.all.modules.ready 1
     write /sys/kernel/cnss/fs_ready 1
 
 on early-boot

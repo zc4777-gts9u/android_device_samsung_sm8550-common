@@ -183,8 +183,11 @@ DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE += \
 DEVICE_MANIFEST_FILE :=  \
     $(COMMON_PATH)/vintf/manifest_extra.xml \
     $(COMMON_PATH)/vintf/manifest_kalama.xml \
-    $(COMMON_PATH)/vintf/manifest_samsung.xml \
-    $(COMMON_PATH)/vintf/radio_manifest.xml
+    $(COMMON_PATH)/vintf/manifest_samsung.xml
+
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
+DEVICE_MANIFEST_FILE += $(COMMON_PATH)/vintf/radio_manifest.xml
+endif
 
 DEVICE_MATRIX_FILE := hardware/qcom-caf/common/compatibility_matrix.xml
 

@@ -48,38 +48,49 @@ PRODUCT_PACKAGES += \
     libqcompostprocbundle \
     libqcomvisualizer \
     libqcomvoiceprocessing \
-    libsamsungSoundbooster_plus \
     libsndcardparser \
     libtinycompress \
     libvolumelistener \
-    SamsungDAP \
-    SoundBoosterStage \
     sound_trigger.primary.kalama
 
 TARGET_EXCLUDES_AUDIOFX := true
 
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
+PRODUCT_PACKAGES += libsamsungSoundbooster_plus SamsungDAP SoundBoosterStage
 $(call soong_config_set,samsungAudioVars,soundbooster_dsp_library,//vendor/samsung/sm8550-common:lib_SoundBooster_ver1100)
+endif
+
+SM8550_AUDIO_EFFECTS_XML ?= $(LOCAL_PATH)/audio/audio_effects.xml
+SM8550_AUDIO_POLICY_CONFIGURATION ?= $(LOCAL_PATH)/audio/audio_policy_configuration.xml
 
 AUDIO_HAL_DIR := hardware/qcom-caf/sm8550/audio/primary-hal
 CONFIG_HAL_SRC_DIR := $(AUDIO_HAL_DIR)/configs/kalama
 CONFIG_PAL_SRC_DIR := $(AUDIO_HAL_DIR)/../pal/configs/kalama
+ifeq ($(strip $(SM8550_AUDIO_SPEAKER_ROUTE)),)
+SM8550_AUDIO_SPEAKER_ROUTE := $(LOCAL_PATH)/audio/audio_policy_speaker_route.xml
+endif
 
 PRODUCT_COPY_FILES += \
     $(CONFIG_PAL_SRC_DIR)/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
     $(CONFIG_HAL_SRC_DIR)/microphone_characteristics.xml:$(TARGET_COPY_OUT_VENDOR)/etc/microphone_characteristics.xml
 
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/audio/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_kalama/audio_effects.xml \
-    $(LOCAL_PATH)/audio/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_kalama/audio_policy_configuration.xml
+    $(SM8550_AUDIO_EFFECTS_XML):$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_kalama/audio_effects.xml \
+    $(SM8550_AUDIO_POLICY_CONFIGURATION):$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_kalama/audio_policy_configuration.xml \
+    $(SM8550_AUDIO_POLICY_CONFIGURATION):$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_kalama_qssi/audio_policy_configuration.xml \
+    $(SM8550_AUDIO_POLICY_CONFIGURATION):$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
+    $(SM8550_AUDIO_SPEAKER_ROUTE):$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_kalama/audio_policy_speaker_route.xml \
+    $(SM8550_AUDIO_SPEAKER_ROUTE):$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_kalama_qssi/audio_policy_speaker_route.xml \
+    $(SM8550_AUDIO_SPEAKER_ROUTE):$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_speaker_route.xml
 
 PRODUCT_COPY_FILES += \
+    frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
     frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     frameworks/av/services/audiopolicy/config/bluetooth_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_audio_policy_configuration.xml \
     frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
     frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
-    frameworks/native/data/etc/android.hardware.sensor.dynamic.head_tracker.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.dynamic.head_tracker.xml \
     frameworks/native/data/etc/android.software.midi.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.midi.xml
 
 # Bluetooth
@@ -160,9 +171,11 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.software.opengles.deqp.level-2022-03-01.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.opengles.deqp.level.xml \
     frameworks/native/data/etc/android.software.vulkan.deqp.level-2022-03-01.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.vulkan.deqp.level.xml
 
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
 # GPS
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.location.gps.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.location.gps.xml
+endif
 
 # Health
 PRODUCT_PACKAGES += \
@@ -173,18 +186,23 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/permissions/privapp-permissions-hotword.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/permissions/privapp-permissions-hotword.xml
 
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
 # IMS
 $(call inherit-product, hardware/lineage/generic-ims/ims.mk)
+endif
 
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
 # IPACM
 PRODUCT_PACKAGES += \
     ipacm \
     IPACM_cfg.xml \
     IPACM_Filter_cfg.xml
+endif
 
 # Init
+SM8550_FSTAB ?= $(LOCAL_PATH)/init/fstab.qcom
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/init/fstab.qcom:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.qcom
+    $(SM8550_FSTAB):$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.qcom
 
 PRODUCT_PACKAGES += \
     fstab.qcom \
@@ -251,6 +269,7 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     vendor.qti.hardware.memtrack-service
 
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
 # NFC
 PRODUCT_PACKAGES += \
     android.hardware.nfc-service.nxp \
@@ -267,11 +286,13 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.se.omapi.uicc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.se.omapi.uicc.xml \
     frameworks/native/data/etc/com.android.nfc_extras.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/com.android.nfc_extras.xml \
     frameworks/native/data/etc/com.nxp.mifare.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/com.nxp.mifare.xml
+endif
 
 # Namespaces
 PRODUCT_SOONG_NAMESPACES += \
     $(LOCAL_PATH) \
     hardware/google/interfaces \
+    hardware/google/pixel \
     hardware/google/pixel/power-libperfmgr \
     hardware/lineage/interfaces/power-libperfmgr \
     hardware/qcom-caf/common/libqti-perfd-client \
@@ -283,8 +304,6 @@ DEVICE_PACKAGE_OVERLAYS += \
 
 PRODUCT_ENFORCE_RRO_TARGETS := *
 PRODUCT_PACKAGES += \
-    CarrierConfigResCommon \
-    CarrierSettingsResCommon \
     FrameworksResCommon \
     FrameworksResSamsung \
     FrameworksResTarget \
@@ -292,10 +311,13 @@ PRODUCT_PACKAGES += \
     SettingsResCommon \
     SettingsResSamsung \
     SystemUIResCommon \
-    TelephonyResCommon \
     WifiResCommon \
     WifiResTarget \
     WifiResTarget_spf
+
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
+PRODUCT_PACKAGES += CarrierConfigResCommon CarrierSettingsResCommon TelephonyResCommon
+endif
 
 # Partitions
 PRODUCT_PACKAGES += \
@@ -311,9 +333,11 @@ PRODUCT_PACKAGES += \
     android.hardware.power-service.lineage-libperfmgr \
     libqti-perfd-client
 
+ifneq ($(TARGET_IS_TABLET),true)
 # PowerShare
 PRODUCT_PACKAGES += \
     vendor.lineage.powershare-service.samsung
+endif
 
 # QSPA
 PRODUCT_PACKAGES += \
@@ -324,6 +348,7 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/permissions/privapp-permissions-qti.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-qti.xml \
     $(LOCAL_PATH)/configs/permissions/qti_whitelist.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/sysconfig/qti_whitelist.xml
 
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
 # RIL
 PRODUCT_PACKAGES += \
     libsec-ril \
@@ -332,6 +357,7 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/ril/sehradiomanager.conf:$(TARGET_COPY_OUT_VENDOR)/etc/sehradiomanager.conf
+endif
 
 # SPen
 ifeq ($(TARGET_HAS_SPEN),true)
@@ -357,17 +383,25 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.sensor.compass.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.compass.xml \
     frameworks/native/data/etc/android.hardware.sensor.gyroscope.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.gyroscope.xml \
     frameworks/native/data/etc/android.hardware.sensor.light.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.light.xml \
-    frameworks/native/data/etc/android.hardware.sensor.proximity.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.proximity.xml \
     frameworks/native/data/etc/android.hardware.sensor.stepcounter.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.stepcounter.xml \
     frameworks/native/data/etc/android.hardware.sensor.stepdetector.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.stepdetector.xml
+
+ifneq ($(TARGET_IS_TABLET),true)
+PRODUCT_COPY_FILES += \
+    frameworks/native/data/etc/android.hardware.sensor.proximity.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.sensor.proximity.xml
+endif
 
 # Shipping API
 BOARD_SHIPPING_API_LEVEL := 33
 PRODUCT_SHIPPING_API_LEVEL := $(BOARD_SHIPPING_API_LEVEL)
 
+ifneq ($(TARGET_IS_TABLET),true)
 # SKU properties
 PRODUCT_COPY_FILES += \
     $(call find-copy-subdir-files,*,$(LOCAL_PATH)/configs/sku/properties/,$(TARGET_COPY_OUT_ODM)/etc/sku_props)
+
+ifneq ($(TARGET_IS_WIFI-ONLY),true)
+endif
 
 # Telephony
 PRODUCT_PACKAGES += \
@@ -385,6 +419,7 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.telephony.ims.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.telephony.ims.xml \
     frameworks/native/data/etc/android.hardware.telephony.mbms.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.telephony.mbms.xml \
     frameworks/native/data/etc/android.software.sip.voip.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.sip.voip.xml
+endif
 
 # USB
 PRODUCT_PACKAGES += \

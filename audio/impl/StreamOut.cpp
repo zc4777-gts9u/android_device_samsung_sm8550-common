@@ -24,6 +24,9 @@
 
 #include <string.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
 #include <memory>
 
 #include <HidlUtils.h>
@@ -65,6 +68,18 @@ class WriteThread : public Thread {
         mBuffer.reset(new (std::nothrow) uint8_t[mDataMQ->getQuantumCount()]);
         return mBuffer != nullptr;
     }
+#ifdef GTS9U_SPEAKER_DOLBY
+    void prepareSpeakerDolby(const std::shared_ptr<::gts9u::audio::SpeakerRoute>& route) {
+        if (!route) return;
+        auto* stream = &mStream->common;
+        auto processor = std::make_unique<::gts9u::audio::SpeakerDolby>();
+        if (processor->configure(stream->get_format(stream), stream->get_channels(stream),
+                                 stream->get_sample_rate(stream))) {
+            mSpeakerRoute = route;
+            mSpeakerDolby = std::move(processor);
+        }
+    }
+#endif
     virtual ~WriteThread() {}
 
    private:
@@ -76,6 +91,10 @@ class WriteThread : public Thread {
     EventFlag* mEfGroup;
     std::unique_ptr<uint8_t[]> mBuffer;
     IStreamOut::WriteStatus mStatus;
+#ifdef GTS9U_SPEAKER_DOLBY
+    std::shared_ptr<::gts9u::audio::SpeakerRoute> mSpeakerRoute;
+    std::unique_ptr<::gts9u::audio::SpeakerDolby> mSpeakerDolby;
+#endif
 
     bool threadLoop() override;
 
@@ -89,6 +108,15 @@ void WriteThread::doWrite() {
     mStatus.retval = Result::OK;
     mStatus.reply.written = 0;
     if (mDataMQ->read(&mBuffer[0], availToRead)) {
+#ifdef GTS9U_SPEAKER_DOLBY
+        if (mSpeakerDolby) {
+            const float volume = mSpeakerRoute->mixVolume.load(std::memory_order_relaxed);
+            mSpeakerDolby->process(
+                    mBuffer.get(), availToRead,
+                    mSpeakerRoute->isSpeaker.load(std::memory_order_relaxed) && volume >= 0.0f,
+                    std::max(volume, 0.0f));
+        }
+#endif
         ssize_t writeResult = mStream->write(mStream, &mBuffer[0], availToRead);
         if (writeResult >= 0) {
             mStatus.reply.written = writeResult;
@@ -303,16 +331,50 @@ Return<void> StreamOut::getDevices(getDevices_cb _hidl_cb) {
 }
 
 Return<Result> StreamOut::setDevices(const hidl_vec<DeviceAddress>& devices) {
-    return mStreamCommon->setDevices(devices);
+    auto result = mStreamCommon->setDevices(devices);
+#ifdef GTS9U_SPEAKER_DOLBY
+    if (mSpeakerRoute && result.isOk() && static_cast<Result>(result) == Result::OK) {
+        const bool speaker = devices.size() != 0 &&
+                std::all_of(devices.begin(), devices.end(), [](const auto& address) {
+                    audio_devices_t type;
+                    char halAddress[AUDIO_DEVICE_MAX_ADDRESS_LEN];
+                    return CoreUtils::deviceAddressToHal(address, &type, halAddress) == OK &&
+                            type == AUDIO_DEVICE_OUT_SPEAKER;
+                });
+        mSpeakerRoute->isSpeaker.store(speaker, std::memory_order_relaxed);
+    }
+#endif
+    return result;
 }
 Return<void> StreamOut::getParameters(const hidl_vec<ParameterValue>& context,
                                       const hidl_vec<hidl_string>& keys,
                                       getParameters_cb _hidl_cb) {
+#ifdef GTS9U_SPEAKER_DOLBY
+    if (mSpeakerRoute && keys.size() == 1 && keys[0] == "gts9u_speaker_volume_reference") {
+        hidl_vec<ParameterValue> values(1);
+        values[0].key = "gts9u_speaker_volume_reference";
+        values[0].value = "1";
+        _hidl_cb(Result::OK, values);
+        return Void();
+    }
+#endif
     return mStreamCommon->getParameters(context, keys, _hidl_cb);
 }
 
 Return<Result> StreamOut::setParameters(const hidl_vec<ParameterValue>& context,
                                         const hidl_vec<ParameterValue>& parameters) {
+#ifdef GTS9U_SPEAKER_DOLBY
+    if (mSpeakerRoute && parameters.size() == 1 && parameters[0].key == "gts9u_speaker_mix_volume") {
+        char* end = nullptr;
+        const char* text = parameters[0].value.c_str();
+        const float volume = strtof(text, &end);
+        if (end == text || *end != '\0' || !std::isfinite(volume) || volume < 0.0f || volume > 1.0f) {
+            return Result::INVALID_ARGUMENTS;
+        }
+        mSpeakerRoute->mixVolume.store(volume, std::memory_order_relaxed);
+        return Result::OK;
+    }
+#endif
     return mStreamCommon->setParameters(context, parameters);
 }
 #endif
@@ -415,6 +477,9 @@ Return<void> StreamOut::prepareForWriting(uint32_t frameSize, uint32_t framesCou
         sendError(Result::INVALID_ARGUMENTS);
         return Void();
     }
+#ifdef GTS9U_SPEAKER_DOLBY
+    tempWriteThread->prepareSpeakerDolby(mSpeakerRoute);
+#endif
     status = tempWriteThread->run("writer", PRIORITY_URGENT_AUDIO);
     if (status != OK) {
         ALOGW("failed to start writer thread: %s", strerror(-status));

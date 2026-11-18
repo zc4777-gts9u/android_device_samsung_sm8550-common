@@ -3,10 +3,25 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-prebuilt_etc {
+soong_config_module_type {
+    name: "sm8550_fstab_etc",
+    module_type: "prebuilt_etc",
+    config_namespace: "samsung_sm8550_fstab",
+    bool_variables: ["gts9uwifi"],
+    properties: ["src"],
+}
+
+sm8550_fstab_etc {
     name: "fstab.qcom",
-    src: "fstab.qcom",
     vendor: true,
+    soong_config_variables: {
+        gts9uwifi: {
+            src: "//device/samsung/gts9uwifi:fstab.gts9uwifi.source",
+            conditions_default: {
+                src: "fstab.qcom",
+            },
+        },
+    },
 }
 
 prebuilt_etc {

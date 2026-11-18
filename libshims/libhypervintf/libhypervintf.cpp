@@ -7,10 +7,15 @@
 #include <string>
 #include <vector>
 
+// Match the CYG1 vendor ABI, including the indirect return of HyPerToken.
 struct HyPerToken {
+    int pid;
+    int id;
+    std::string processName;
 };
 
-void hyper_getNewHyPerToken(void) {
+HyPerToken hyper_getNewHyPerToken() {
+    return {0, -1, {}};
 }
 
 void hyper_setTokenProcName(HyPerToken*, std::string) {
@@ -19,7 +24,14 @@ void hyper_setTokenProcName(HyPerToken*, std::string) {
 void hyper_checkResourceExist(int) {
 }
 
+bool hyper_checkHintExist(int) {
+    return false;
+}
+
 void hyper_acquire(HyPerToken, std::vector<int>) {
+}
+
+void hyper_acquire(HyPerToken, int, std::vector<int>) {
 }
 
 void hyper_setProcName(std::string) {

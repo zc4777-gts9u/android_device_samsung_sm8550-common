@@ -1,2 +1,7 @@
 # Allow vendor_spdaemon to find hal_system_suspend_service
 allow vendor_spdaemon hal_system_suspend_service:service_manager find;
+
+# The AIDL client receives servicemanager notifications and acquires wakelocks
+# through ISystemSuspend. Finding the service alone does not permit these calls.
+binder_use(vendor_spdaemon)
+binder_call(vendor_spdaemon, system_suspend_server)

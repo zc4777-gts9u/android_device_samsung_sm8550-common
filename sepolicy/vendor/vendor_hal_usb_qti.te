@@ -1,1 +1,5 @@
+# Resolve /sys/class/power_supply/usb and read its type for charger status.
+# Keep access to the Samsung supply read-only; its wakeup labels are separate.
+allow vendor_hal_usb_qti sysfs_batteryinfo:dir search;
 allow vendor_hal_usb_qti vendor_sysfs_battery:dir search;
+allow vendor_hal_usb_qti vendor_sysfs_battery:file r_file_perms;
