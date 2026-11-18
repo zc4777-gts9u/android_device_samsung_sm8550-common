@@ -97,5 +97,3 @@
 /(vendor|system/vendor)/bin/time_client                                                                      u:object_r:vendor_time_daemon_exec:s0
 /(vendor|system/vendor)/bin/hw/macloader                                                                     u:object_r:macloader_exec:s0
 /(vendor|system/vendor)/bin/hw/vendor\.samsung\.hardware\.spen-service                                       u:object_r:hal_samsung_spen_default_exec:s0
-
-/mnt/vendor/efs/wifi(/.*)? u:object_r:wifi_efs_file:s0
