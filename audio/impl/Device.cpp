@@ -200,7 +200,10 @@ std::tuple<Result, sp<IStreamOut>> Device::openOutputStreamCore(int32_t ioHandle
     if (status == OK) {
         auto output = sp<StreamOut>::make(this, halStream, halFlags);
 #ifdef GTS9U_SPEAKER_DOLBY
-        output->setSpeakerRoute(mSpeakerRoutes.open(ioHandle, halDevice));
+        // Only the SM-X910 speaker media profile uses FAST without PRIMARY or RAW.
+        if (halFlags == AUDIO_OUTPUT_FLAG_FAST && halDevice == AUDIO_DEVICE_OUT_SPEAKER) {
+            output->setSpeakerRoute(mSpeakerRoutes.open(ioHandle, halDevice));
+        }
 #endif
         streamOut = output;
         ++mOpenedStreamsCount;
